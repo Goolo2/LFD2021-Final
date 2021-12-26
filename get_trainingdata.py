@@ -12,14 +12,19 @@ from pynput.keyboard import Controller, Key, Listener
 from pynput import keyboard
 import time, threading
 from 模型_策略梯度 import 智能体
-_DEVICE_ID = '68UDU17B14011947'
+# _DEVICE_ID = '68UDU17B14011947'
+# _DEVICE_ID = 'd1cc0a52' #小米
+# _DEVICE_ID = 'emulator-5554' #雷电
+_DEVICE_ID = '127.0.0.1:7555' #mumu
 
 
-窗口名称="RNE-AL00"
+# window="RNE-AL00"
+# window="PCLM10" #雷电
+window="R11" #mumu
 
-训练数据保存目录='../训练数据样本/未用'
-if not os.path.exists(训练数据保存目录):
-   os.makedirs(训练数据保存目录)
+datadir='../dataset/unused'
+if not os.path.exists(datadir):
+   os.makedirs(datadir)
 lock=threading.Lock()
 start=time.time()
 end=time.time()
@@ -170,10 +175,10 @@ def 处理方向():
 
 
 
-加三技能='d 0 552 1878 100\nc\nu 0\nc\n'
-加二技能='d 0 446 1687 100\nc\nu 0\nc\n'
-加一技能='d 0 241 1559 100\nc\nu 0\nc\n'
-购买='d 0 651 207 100\nc\nu 0\nc\n'
+加三技能='d 0 559 1767 100\nc\nu 0\nc\n'
+加二技能='d 0 443 1562 100\nc\nu 0\nc\n'
+加一技能='d 0 246 1448 100\nc\nu 0\nc\n'
+购买='d 0 636 190 100\nc\nu 0\nc\n'
 词数词典路径="./json/词_数表.json"
 数_词表路径="./json/数_词表.json"
 操作查询路径="./json/名称_操作.json"
@@ -204,7 +209,7 @@ while True:
 
 
 
-        图片路径=训练数据保存目录+'/{}/'.format(str(int( time.time())) )
+        图片路径=datadir+'/{}/'.format(str(int( time.time())) )
         os.mkdir(图片路径)
 
         记录文件=open(图片路径+'_操作数据.json','w+')
@@ -227,7 +232,7 @@ while True:
             if AI打开==False:
                 break
             try:
-                imgA = 取图(窗口名称)
+                imgA = 取图(window)
             except:
                 AI打开 = False
                 print('取图失败')
