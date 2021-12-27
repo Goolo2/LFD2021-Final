@@ -8,7 +8,7 @@ import numpy as np
 from 辅助功能 import 状态信息综合
 import torchvision
 from resnet_utils import myResnet
-from 模型_策略梯度 import 智能体
+from Model_strategy import agent
 from Batch import create_masks
 import subprocess
 from PyQt5.QtWidgets import QApplication
@@ -20,7 +20,7 @@ from 运行辅助 import MyMNTDevice,取图
 from pynput.keyboard import  Key, Listener
 from pynput import keyboard
 import random
-from  模型_策略梯度 import  Transformer
+from  Model_strategy import  Transformer
 #window = int(subprocess.check_output(["xdotool", "search" ,"VehiclePhysicsExampleeeveed181"]).decode('ascii').split('\n')[0])
 _DEVICE_ID = '68UDU17B14011947'
 窗口名称="RNE-AL00"
@@ -36,7 +36,7 @@ N = 15000 # 运行N次后学习
 条数 = 100
 轮数 = 3
 学习率 = 0.0003
-智能体 = 智能体(动作数=7, 并行条目数=条数,
+agent = agent(动作数=7, 并行条目数=条数,
           学习率=学习率, 轮数=轮数,
           输入维度=6)
 
@@ -238,7 +238,7 @@ for i in range(6666666):
 
 
 
-        动作, 动作可能性, 评价 = 智能体.选择动作(状态,device,0)
+        动作, 动作可能性, 评价 = agent.选择动作(状态,device,0)
 
         if 计数 % 50 == 0 and 计数 != 0:
             设备.发送(购买)

@@ -49,13 +49,26 @@ def 写出词标号引索(总词表,  词_数表路径, 数_词表路径):
     with open(数_词表路径, 'w', encoding='utf-8') as f:
         json.dump(标号_到_字符, f, ensure_ascii=False)
 
-def 读出引索(词_数表路径, 数_词表路径):
-    with open(词_数表路径, encoding='utf-8') as f:
-        词_数表= json.load(f)
+# def 读出引索(词_数表路径, 数_词表路径):
+#     with open(词_数表路径, encoding='utf-8') as f:
+#         词_数表= json.load(f)
 
-    with open(数_词表路径, encoding='utf-8') as f:
-        数_词表 = json.load(f)
-    return 词_数表, 数_词表
+#     with open(数_词表路径, encoding='utf-8') as f:
+#         数_词表 = json.load(f)
+#     return 词_数表, 数_词表
+
+# def read_json(comb_idx_dir, idx_comb_dir):
+#     with open(comb_idx_dir, encoding='utf-8') as f:
+#         词_数表= json.load(f)
+
+#     with open(idx_comb_dir, encoding='utf-8') as f:
+#         数_词表 = json.load(f)
+#     return 词_数表, 数_词表
+
+def read_json(jsondir):
+    with open(jsondir, encoding='utf-8') as f:
+        results = json.load(f)
+    return results
 
 def 生成训练用numpy数组(输入表单, 词_数表, numpy数组路径):
     表_1 = []

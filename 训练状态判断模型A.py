@@ -8,7 +8,7 @@ import torch.nn as nn
 from Sublayers import Norm, 全连接层
 import math
 import torch.nn.functional as F
-from  模型_策略梯度 import  Transformer
+from  Model_strategy import  Transformer
 from Batch import create_masks
 device = torch.device("cuda:0" if (torch.cuda.is_available()) else "cpu")
 resnet101=torchvision.models.resnet101(pretrained=True).eval()

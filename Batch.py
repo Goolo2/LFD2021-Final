@@ -5,8 +5,7 @@ from torch.autograd import Variable
 
 
 def nopeak_mask(size, device):
-    np_mask = np.triu(np.ones((1, size, size)),
-    k=1).astype('uint8')
+    np_mask = np.triu(np.ones((1, size, size)),k=1).astype('uint8')
     variable = Variable
     np_mask = variable(torch.from_numpy(np_mask) == 0)
     np_mask = np_mask.cuda(device)

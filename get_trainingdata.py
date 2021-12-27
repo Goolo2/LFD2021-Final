@@ -11,7 +11,7 @@ from 运行辅助 import *
 from pynput.keyboard import Controller, Key, Listener
 from pynput import keyboard
 import time, threading
-from 模型_策略梯度 import 智能体
+from Model_strategy import Agent
 # _DEVICE_ID = '68UDU17B14011947'
 # _DEVICE_ID = 'd1cc0a52' #小米
 # _DEVICE_ID = 'emulator-5554' #雷电
@@ -54,7 +54,7 @@ N = 15000 # 运行N次后学习
 条数 = 100
 轮数 = 3
 学习率 = 0.0003
-智能体 = 智能体(动作数=7, 并行条目数=条数,
+agent = Agent(动作数=7, 并行条目数=条数,
           学习率=学习率, 轮数=轮数,
           输入维度=6)
 
@@ -179,19 +179,29 @@ def 处理方向():
 加二技能='d 0 443 1562 100\nc\nu 0\nc\n'
 加一技能='d 0 246 1448 100\nc\nu 0\nc\n'
 购买='d 0 636 190 100\nc\nu 0\nc\n'
-词数词典路径="./json/词_数表.json"
-数_词表路径="./json/数_词表.json"
-操作查询路径="./json/名称_操作.json"
+# 词数词典路径="./json/词_数表.json"
+# 数_词表路径="./json/数_词表.json"
+ope_com_dir="./json/ope_command.json"
 操作词典={"图片号":"0","移动操作":"无移动","动作操作":"无动作"}
 th = threading.Thread(target=start_listen,)
 th.start() #启动线程
 
-if os.path.isfile(词数词典路径) and os.path.isfile(数_词表路径):
-    词_数表, 数_词表 = 读出引索(词数词典路径, 数_词表路径)
-with open(词数词典路径, encoding='utf8') as f:
-    词数词典 = json.load(f)
-with open(操作查询路径, encoding='utf8') as f:
-    操作查询词典 = json.load(f)
+# if os.path.isfile(词数词典路径) and os.path.isfile(数_词表路径):
+#     词_数表, idx_comb = 读出引索(词数词典路径, 数_词表路径)
+
+
+comb_idx_dir = "./json/comb_idx.json"
+idx_comb_dir = "./json/idx_comb.json"
+
+
+comb_idx = read_json(comb_idx_dir)
+idx_comb = read_json(idx_comb_dir)
+ope_command_dict = read_json(ope_com_dir)
+
+# with open(ope_com_dir, encoding='utf8') as f:
+#     ope_command_dict = json.load(f)
+
+
 
 方向表 = ['上移', '下移', '左移', '右移', '左上移', '左下移', '右上移', '右下移']
 
@@ -276,7 +286,7 @@ while True:
 
             状态 = 状态信息综合(图片张量.cpu().numpy(), 操作序列, trg_mask)
 
-            动作, 动作可能性, 评价 = 智能体.选择动作(状态,device,1,False)
+            动作, 动作可能性, 评价 = agent.选择动作(状态,device,1,False)
             LI = 操作张量.contiguous().view(-1)
             # LA=输出_实际_A.view(-1, 输出_实际_A.size(-1))
             if 计数 % 50 == 0 and 计数!=0:
@@ -285,10 +295,10 @@ while True:
                 设备.发送(加三技能)
                 设备.发送(加二技能)
                 设备.发送(加一技能)
-                设备.发送(操作查询词典['移动停'])
+                设备.发送(ope_command_dict['移动停'])
                 print(旧指令,'周期')
                 time.sleep(0.02)
-                设备.发送(操作查询词典[旧指令])
+                设备.发送(ope_command_dict[旧指令])
 
 
             if 计数 % 1 == 0:
@@ -297,7 +307,7 @@ while True:
 
 
 
-                指令=数_词表[str(动作)]
+                指令=idx_comb[str(动作)]
                 指令集=指令.split('_')
 
                 #操作词典 = {"图片号": "0", "移动操作": "无移动", "动作操作": "无动作"}
@@ -339,7 +349,7 @@ while True:
                         try:
                             print('手动模式',旧指令)
 
-                            设备.发送(操作查询词典[旧指令])
+                            设备.发送(ope_command_dict[旧指令])
 
                         except:
                             AI打开 = False
@@ -351,7 +361,7 @@ while True:
                     if 操作词典['动作操作'] != '无动作' and 操作词典['动作操作'] != '发起集合' and 操作词典['动作操作'] != '发起进攻' and 操作词典['动作操作'] != '发起撤退':
                         print('手动',指令集[1])
                         try:
-                            设备.发送(操作查询词典[操作词典['动作操作']])
+                            设备.发送(ope_command_dict[操作词典['动作操作']])
                         except:
                             AI打开 = False
                             print('发送失败')
@@ -368,7 +378,7 @@ while True:
                         try:
                             print(旧指令)
 
-                            设备.发送(操作查询词典[旧指令])
+                            设备.发送(ope_command_dict[旧指令])
 
                         except:
                             AI打开 = False
@@ -388,7 +398,7 @@ while True:
                     if 指令集[1] != '无动作' and 指令集[1] != '发起集合' and 指令集[1] != '发起进攻' and 指令集[1] != '发起撤退':
                         print(指令集[1])
                         try:
-                            设备.发送(操作查询词典[指令集[1]])
+                            设备.发送(ope_command_dict[指令集[1]])
                         except:
                             AI打开 = False
                             print('发送失败')
