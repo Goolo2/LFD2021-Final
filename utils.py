@@ -11,15 +11,21 @@ from PIL import Image, ImageQt
 import sys
 
 
-def 打印抽样数据(数_词表, 数据, 输出_分):
-    临 = 数据[0]
-    欲打印 = [数_词表[str(临[i, 0])] for i in range(0, 临.shape[0])]
-    临 = 输出_分.cpu().numpy()
-    欲打印2 = [数_词表[str(临[i])] for i in range(0, 临.shape[0])]
-    print("抽样输出", 欲打印)
-    print("目标输出", 欲打印2)
-    # for i in range(16):
-    #     print(数_词表[str(临[i, 0])])
+class MyMNTDevice(MNTDevice):
+    def __init__(self, ID):
+        MNTDevice.__init__(self, ID)
+
+    def send_command(self, 内容):
+        self.connection.send(内容)
+
+
+def get_sample_data(idx_comb, data, score):
+    tmp = data[0]
+    list1 = [idx_comb[str(tmp[i, 0])] for i in range(0, tmp.shape[0])]
+    tmp = score.cpu().numpy()
+    list2 = [idx_comb[str(tmp[i])] for i in range(0, tmp.shape[0])]
+    print("抽样输出", list1)
+    print("目标输出", list2)
 
 
 def nopeak_mask(size, device):
@@ -45,14 +51,6 @@ def read_json(jsondir):
     return results
 
 
-class MyMNTDevice(MNTDevice):
-    def __init__(self, ID):
-        MNTDevice.__init__(self, ID)
-
-    def send_command(self, 内容):
-        self.connection.send(内容)
-
-
 def capture_img(wname):
     hwnd = win32gui.FindWindow(0, wname)
     # hwnd = win32gui.FindWindow(0,'王者荣耀 - MuMu模拟器')
@@ -60,7 +58,7 @@ def capture_img(wname):
     screen = QApplication.primaryScreen()
     img = screen.grabWindow(hwnd).toImage()
     image = ImageQt.fromqimage(img)
-    print(image.size)
+    # print(image.size)
 
     box = (0, 0, 960, 480)
     im2 = image.crop(box)

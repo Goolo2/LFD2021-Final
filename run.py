@@ -1,3 +1,13 @@
+'''
+@File    :   run.py
+@Time    :   2021/12/30 20:52:02
+@Author  :   goole 
+@Version :   1.0
+@Discrib :   1. python ./start_scrcpy.py  #连接模拟器
+             2. python ./run,py  #开始控制和截图
+             
+'''
+
 import os
 import torchvision
 from Batch import create_masks
@@ -7,12 +17,13 @@ from get_trainingdata import *
 from utils import *
 
 from resnet_utils import myResnet
-from 运行辅助 import *
+from utils import *
 from pynput.keyboard import Controller, Key, Listener
 from pynput import keyboard
 import time
 import threading
 from Model_strategy import Agent
+
 # _DEVICE_ID = '68UDU17B14011947'
 # _DEVICE_ID = 'd1cc0a52' #小米
 # _DEVICE_ID = 'emulator-5554' #雷电
@@ -55,9 +66,9 @@ N = 15000  # 运行N次后学习
 parallel = 100
 episode = 3
 lr = 0.0003
-agent = Agent(动作数=7, 并行条目数=parallel,
-              学习率=lr, 轮数=episode,
-              输入维度=6)
+agent = Agent(action_num=7, pl_num=parallel,
+              lr=lr, episode=episode,
+              input_size=6)
 
 
 def get_key_name(key):
@@ -247,26 +258,20 @@ while True:
             start_t = time.time()
 
             if img_tensor.shape[0] == 0:
-
                 img = np.array(imgA)
-
                 img = torch.tensor(img).cuda(device).unsqueeze(0).permute(0, 3, 2, 1) / 255
                 _, out = resnet101(img)
                 img_tensor = out.reshape(1, 6*6*2048)
 
             elif img_tensor.shape[0] < 300:
-
                 img = np.array(imgA)
-
                 img = torch.tensor(img).cuda(device).unsqueeze(0).permute(0, 3, 2, 1) / 255
                 _, out = resnet101(img)
                 img_tensor = torch.cat((img_tensor, out.reshape(1, 6*6*2048)), 0)
                 ope_seq = np.append(ope_seq, action)
 
             else:
-
                 img = np.array(imgA)
-
                 img = torch.tensor(img).cuda(device).unsqueeze(0).permute(0, 3, 2, 1) / 255
                 _, out = resnet101(img)
                 img_tensor = img_tensor[1:300, :]

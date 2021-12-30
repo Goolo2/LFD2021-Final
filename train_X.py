@@ -47,17 +47,17 @@ device = torch.device("cuda:0" if (torch.cuda.is_available()) else "cpu")
 config = TransformerConfig()
 # 模型路径 = 'model_weights_2021-05-7D'
 
-mymodel = Transformer(6, 768, 2, 12, 0.0, 6*6*2048)
-mymodel.load_state_dict(torch.load('weights/model_weights_判断状态L'))
-mymodel.cuda(device).requires_grad_(False)
+model_judge_state = Transformer(6, 768, 2, 12, 0.0, 6*6*2048)
+model_judge_state.load_state_dict(torch.load('weights/model_weights_判断状态L'))
+model_judge_state.cuda(device).requires_grad_(False)
 
 N = 15000  # 运行N次后学习
 parallel = 100
 episode = 3
 lr = 0.0003
-agent = Agent(动作数=7, 并行条目数=parallel,
-              学习率=lr, 轮数=episode,
-              输入维度=6)
+agent = Agent(action_num=7, pl_num=parallel,
+              lr=lr, episode=episode,
+              input_size=6)
 
 
 chunksize = 600
@@ -134,9 +134,10 @@ for j in range(100):
                 state['img_tensor'] = pic_branch
                 state['trg_mask'] = trg_mask
 
+                # TODO: 这里开了手动的flag可能有问题，
                 action, action_prob, critic = agent.select_action_batch(state, device, tgtoutput_score_tensor, True)
 
-                real_output, _ = mymodel(pic_score_tensor, ope_seqA_tensor, trg_mask)
+                real_output, _ = model_judge_state(pic_score_tensor, ope_seqA_tensor, trg_mask)
 
                 _, sample = torch.topk(real_output, k=1, dim=-1)
                 samplenp = sample.cpu().numpy()

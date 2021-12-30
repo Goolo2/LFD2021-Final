@@ -9,14 +9,14 @@ import torch
 import torch.nn as nn
 from Layers import DecoderLayer
 from Embed import Embedder, PositionalEncoder
-from Sublayers import Norm, 全连接层
+from Sublayers import Norm, MLP
 import copy
 import os.path
 import torchvision
 from config import TransformerConfig
 import torch.nn.functional as F
 from Batch import create_masks
-from utils import 打印抽样数据
+from utils import get_sample_data
 import pickle
 import gc
 
@@ -57,22 +57,22 @@ class Decoder(nn.Module):
 
 
 class Transformer(nn.Module):
-    def __init__(self,  trg_vocab, d_model, N, heads, dropout, 图向量尺寸=6*6*2048):
+    def __init__(self,  trg_vocab, d_model, N, heads, dropout, graph_vec_size=6*6*2048):
         super().__init__()
-        self.图转 = 全连接层(图向量尺寸, d_model)
+        self.graph_encoder = MLP(graph_vec_size, d_model)
 
         self.decoder = Decoder(trg_vocab, d_model, N, heads, dropout)
-        self.outX = 全连接层(d_model, trg_vocab)
+        self.outX = MLP(d_model, trg_vocab)
 
-        self.评价 = 全连接层(d_model, 1)
+        self.critic = MLP(d_model, 1)
 
-    def forward(self, 图向量, 操作, trg_mask):
-        图向量 = self.图转(图向量)
+    def forward(self, graph_vec, 操作, trg_mask):
+        graph_vec = self.graph_encoder(graph_vec)
 
-        d_output = self.decoder(图向量, 操作, trg_mask)
+        d_output = self.decoder(graph_vec, 操作, trg_mask)
         output = self.outX(d_output)
-        评价 = self.评价(d_output)
-        return output, 评价
+        critic = self.critic(d_output)
+        return output, critic
 
 
 def get_model(opt, trg_vocab, model_weights='model_weights'):
@@ -91,23 +91,23 @@ def get_model(opt, trg_vocab, model_weights='model_weights'):
             print('model weights dont exists')
     else:
         print('no opt.load_weights')
-        量 = 0
+        total = 0
         for p in model.parameters():
             if p.dim() > 1:
                 # nn.init.xavier_uniform_(p)
                 a = 0
-            长 = len(p.shape)
-            点数 = 1
-            for j in range(长):
-                点数 = p.shape[j] * 点数
+            length = len(p.shape)
+            point = 1
+            for j in range(length):
+                point = p.shape[j] * point
 
-            量 += 点数
-        print('使用参数:{}百万'.format(量 / 1000000))
+            total += point
+        print('使用参数:{}百万'.format(total / 1000000))
     return model
 
 
-class PPO_数据集:
-    def __init__(self, 并行条目数量):
+class PPO_dataset:
+    def __init__(self, pl_num):
 
         #self.状态集 = []
         self.动作概率集 = []
@@ -116,17 +116,17 @@ class PPO_数据集:
         self.回报集 = []
         self.完结集 = []
 
-        self.并行条目数量 = 并行条目数量
+        self.pl_num = pl_num
         self.完整数据 = {}
         self.图片信息 = np.ones([1, 1000, 6*6*2048], dtype='float')
         self.操作信息 = np.ones((0,))
 
     def 提取数据(self):
         状态集_长度 = len(self.回报集)
-        条目_起始位 = np.arange(0, 状态集_长度-100, self.并行条目数量)
+        条目_起始位 = np.arange(0, 状态集_长度-100, self.pl_num)
         下标集 = np.arange(状态集_长度, dtype=np.int64)
 
-        条目集 = [下标集[i:i + self.并行条目数量] for i in 条目_起始位]
+        条目集 = [下标集[i:i + self.pl_num] for i in 条目_起始位]
 
         return np.array(self.动作集),\
             np.array(self.动作概率集), \
@@ -251,13 +251,13 @@ def 处理状态参数(状态组, device):
 
 
 class Agent:
-    def __init__(self, 动作数, 输入维度, 优势估计参数G=0.9999, 学习率=0.0003, 泛化优势估计参数L=0.985,
-                 策略裁剪幅度=0.2, 并行条目数=64, 轮数=10, 熵系数=0.01):
-        self.优势估计参数G = 优势估计参数G
-        self.策略裁剪幅度 = 策略裁剪幅度
-        self.轮数 = 轮数
-        self.熵系数 = 熵系数
-        self.泛化优势估计参数L = 泛化优势估计参数L
+    def __init__(self, action_num, input_size, adv_est_G=0.9999, lr=0.0003, gnr_adv_est_L=0.985,
+                 clip=0.2, pl_num=64, episode=10, entropy=0.01):
+        self.adv_est_G = adv_est_G
+        self.clip = clip
+        self.episode = episode
+        self.entropy = entropy
+        self.gnr_adv_est_L = gnr_adv_est_L
         device = torch.device("cuda:0" if (torch.cuda.is_available()) else "cpu")
         # 模型名称 = '模型_策略梯度_丙TA'
         模型名称 = '模型_策略梯度_丙TA'
@@ -277,20 +277,20 @@ class Agent:
         model = model.cuda(device)
         self.action = model
         #torch.save(self.动作.state_dict(), 'weights/模型_动作ppo阶段停bZ1')
-        self.优化函数 = torch.optim.Adam(self.action.parameters(), lr=2e-5, betas=(0.9, 0.95), eps=1e-9)
+        self.optimizer = torch.optim.Adam(self.action.parameters(), lr=2e-5, betas=(0.9, 0.95), eps=1e-9)
 
-        self.数据集 = PPO_数据集(并行条目数)
-        self.文件名集 = []
+        self.dataset = PPO_dataset(pl_num)
+        self.filename_set = []
 
-    def 记录数据(self, 状态, 动作, 动作概率, 评价, 回报, 完结, 计数):
-        self.数据集.记录数据(状态, 动作, 动作概率, 评价, 回报, 完结, 计数)
+    # def 记录数据(self, 状态, 动作, 动作概率, 评价, 回报, 完结, 计数):
+    #     self.数据集.记录数据(状态, 动作, 动作概率, 评价, 回报, 完结, 计数)
 
-    def 存硬盘(self, 文件名):
-        self.数据集.存硬盘(文件名)
-        self.文件名集.append(文件名)
+    # def 存硬盘(self, 文件名):
+    #     self.数据集.存硬盘(文件名)
+    #     self.文件名集.append(文件名)
 
-    def 读硬盘(self, 文件名):
-        self.数据集.读硬盘(文件名)
+    # def 读硬盘(self, 文件名):
+    #     self.数据集.读硬盘(文件名)
 
     def savemodel(self, 轮号):
         print('... savemodel ...')
@@ -300,10 +300,10 @@ class Agent:
         #torch.save(self.评论.state_dict(), 'weights/模型_评论')
 
         #torch.save(self.评论.state_dict(), 'weights/模型_评论2')
-    def 载入模型(self):
-        print('... 载入模型 ...')
-        self.action.载入权重()
-        # self.评价.载入权重()
+    # def 载入模型(self):
+    #     print('... 载入模型 ...')
+    #     self.action.载入权重()
+    #     # self.评价.载入权重()
 
     def select_action(self, state, device, input_action, flag=False):
 
@@ -364,8 +364,8 @@ class Agent:
             #     if k == '评价.weight' or k=='评价.bias':
             #         v.requires_grad = True
 
-            for _ in range(self.轮数):
-                动作集, 旧_动作概率集, 评价集, 回报集, 完结集, 图片集合, 动作数组, 条目集 = self.数据集.提取数据()
+            for _ in range(self.episode):
+                动作集, 旧_动作概率集, 评价集, 回报集, 完结集, 图片集合, 动作数组, 条目集 = self.dataset.提取数据()
                 print('回报集', 回报集[0:10])
                 价值 = 评价集
 
@@ -374,11 +374,11 @@ class Agent:
                 for t in range(len(回报集) - 1):
                     折扣率 = 1
                     优势值 = 0
-                    折扣率 = self.优势估计参数G * self.泛化优势估计参数L
+                    折扣率 = self.adv_est_G * self.gnr_adv_est_L
                     计数 = 0
                     for k in range(t, len(回报集) - 1):
 
-                        优势值 += pow(折扣率, abs(0-计数)) * (回报集[k] + self.优势估计参数G * 价值[k + 1] * (1 - int(完结集[k])) - 价值[k])
+                        优势值 += pow(折扣率, abs(0-计数)) * (回报集[k] + self.adv_est_G * 价值[k + 1] * (1 - int(完结集[k])) - 价值[k])
                         计数 = 计数+1
                         if (1 - int(完结集[k])) == 0 or 计数 > 100:
 
@@ -414,8 +414,8 @@ class Agent:
                     # 概率比 = 新_动作概率s.exp() / 旧_动作概率s.exp()
                     # # prob_ratio = (new_probs - old_probs).exp()
                     # 加权概率 = 优势函数值[条末] * 概率比
-                    # 加权_裁剪_概率 = T.clamp(概率比, 1 - self.策略裁剪幅度,
-                    #                                  1 + self.策略裁剪幅度) * 优势函数值[条末]
+                    # 加权_裁剪_概率 = T.clamp(概率比, 1 - self.clip,
+                    #                                  1 + self.clip) * 优势函数值[条末]
                     # 动作损失 = -T.min(加权概率, 加权_裁剪_概率).mean()
 
                     总回报 = 优势函数值[条末] + 价值[条末]
@@ -424,18 +424,18 @@ class Agent:
                     评价损失 = (总回报 - 评价结果) ** 2
                     评价损失 = 评价损失 .mean()
 
-                    总损失 = 动作损失 + 0.5 * 评价损失-self.熵系数*熵损失
+                    总损失 = 动作损失 + 0.5 * 评价损失-self.entropy*熵损失
                     # print(总损失)
 
-                    self.优化函数.zero_grad()
+                    self.optimizer.zero_grad()
                    # self.优化函数_评论.zero_grad()
                     总损失.backward()
-                    self.优化函数.step()
+                    self.optimizer.step()
                    # self.优化函数_评论.step()
                 print('总损失', 总损失)
 
-        self.数据集.清除数据()
-        self.文件名集 = []
+        self.dataset.清除数据()
+        self.filename_set = []
 
     def supervised_rl(self, device, state, reward, action, action_prob, critic):
         # print(device,状态,回报,动作,动作可能性,评价)
@@ -447,23 +447,23 @@ class Agent:
         value = critic.cpu().numpy()[0, :, 0]
         advantage_func_value = np.zeros(reward_set.shape[0], dtype=np.float32)
         for t in range(len(reward_set) - 1):
-            折扣率 = 1
-            优势值 = 0
-            折扣率 = self.优势估计参数G * self.泛化优势估计参数L
-            计数 = 0
+            gamma = 1
+            adv_value = 0
+            gamma = self.adv_est_G * self.gnr_adv_est_L
+            count = 0
             for k in range(t, len(reward_set) - 1):
 
-                优势值 += pow(折扣率, abs(0 - 计数)) * (reward_set[k])
-                计数 = 计数 + 1
-                if 计数 > 200:
+                adv_value += pow(gamma, abs(0 - count)) * (reward_set[k])
+                count = count + 1
+                if count > 200:
                     break
-            advantage_func_value[t] = 优势值
+            advantage_func_value[t] = adv_value
 
             value = T.tensor(value).to(device)
         for i in range(3):
             advantage_func_value = T.tensor(advantage_func_value).to(device)
-            旧_动作概率s = T.tensor(action_prob).to(device)
-            动作s = T.tensor(action).to(device)
+            # 旧_动作概率s = T.tensor(action_prob).to(device)
+            action_s = T.tensor(action).to(device)
 
             self.action.requires_grad_(True)
 
@@ -471,133 +471,39 @@ class Agent:
             img_tensor = torch.from_numpy(state['img_tensor']).cuda(device).float()
             trg_mask = state['trg_mask']
 
-            分布, 评价结果 = self.action(img_tensor, ope_seq, trg_mask)
+            dist, critic = self.action(img_tensor, ope_seq, trg_mask)
 
-            分布 = F.softmax(分布, dim=-1)
+            dist = F.softmax(dist, dim=-1)
             # 分布 = 分布[:, - 1, :]
             # 评价结果 = 评价结果[:, - 1, :]
-            评价结果 = T.squeeze(评价结果)
-            分布 = Categorical(分布)
+            critic = T.squeeze(critic)
+            dist = Categorical(dist)
             #熵损失 = torch.mean(分布.entropy())
-            新_动作概率s = 分布.log_prob(动作s)
+            new_action_s = dist.log_prob(action_s)
             # 旧_动作概率s=旧_动作概率s.exp()
             # 概率比 = 新_动作概率s / 旧_动作概率s
             # # prob_ratio = (new_probs - old_probs).exp()
             # 加权概率 = 优势函数值 * 概率比
-            # 加权_裁剪_概率 = T.clamp(概率比, 1 - self.策略裁剪幅度,
-            #                    1 + self.策略裁剪幅度) * 优势函数值
+            # 加权_裁剪_概率 = T.clamp(概率比, 1 - self.clip,
+            #                    1 + self.clip) * 优势函数值
             # 动作损失 = -T.min(加权概率, 加权_裁剪_概率).mean()
             #概率比2 = 新_动作概率s.mean() / 旧_动作概率s.mean()
-            总回报 = advantage_func_value  # + 价值
-            动作损失 = -总回报 * 新_动作概率s
-            动作损失 = 动作损失.mean()
+            total_reward = advantage_func_value  # + 价值
+            action_loss = -total_reward * new_action_s
+            action_loss = action_loss.mean()
             #评价损失 = (总回报 - 评价结果) ** 2
             #评价损失 = 评价损失.mean()
-            print(总回报[10:20], 新_动作概率s[:, 10:20].exp())
+            print(total_reward[10:20], new_action_s[:, 10:20].exp())
 
-            总损失 = 动作损失  # + 0.5 * 评价损失 - self.熵系数 * 熵损失
+            total_loss = action_loss  # + 0.5 * 评价损失 - self.熵系数 * 熵损失
             # print(总损失)
 
-            self.优化函数.zero_grad()
+            self.optimizer.zero_grad()
             # self.优化函数_评论.zero_grad()
-            总损失.backward()
-            self.优化函数.step()
+            total_loss.backward()
+            self.optimizer.step()
         # self.优化函数_评论.step()
 
-    def 监督强化学习A(self, device, 状态, 回报, 动作, 动作可能性, 评价, 完结集):
-        # print(device,状态,回报,动作,动作可能性,评价)
-        # for k, v in self.动作.named_parameters():
-        #
-        #     if k == '评价.weight' or k=='评价.bias':
-        #         v.requires_grad = True
-        回报集 = 回报
-        价值 = 评价.cpu().numpy()[0, :, 0]
-        优势函数值 = np.zeros(回报集.shape[0], dtype=np.float32)
-        for t in range(len(回报集) - 1):
-            折扣率 = 1
-            优势值 = 0
-            折扣率 = self.优势估计参数G * self.泛化优势估计参数L
-            计数 = 0
-            for k in range(t, len(回报集) - 1):
-
-                优势值 += pow(折扣率, abs(0 - 计数)) * (回报集[k]*(1-完结集[0, k]*0))
-                计数 = 计数 + 1
-                if 计数 > 200 or 完结集[0, k] == 2111111:
-                    break
-            优势函数值[t] = 优势值
-
-            价值 = T.tensor(价值).to(device)
-        for i in range(3):
-            优势函数值 = T.tensor(优势函数值).to(device)
-            旧_动作概率s = T.tensor(动作可能性).to(device)
-            动作s = T.tensor(动作).to(device)
-
-            self.action.requires_grad_(True)
-
-            操作序列 = torch.from_numpy(状态['操作序列'].astype(np.int64)).cuda(device)
-            图片张量 = torch.from_numpy(状态['图片张量']).cuda(device).float()
-            trg_mask = 状态['trg_mask']
-
-            分布, 评价结果 = self.action(图片张量, 操作序列, trg_mask)
-
-            分布 = F.softmax(分布, dim=-1)
-            # 分布 = 分布[:, - 1, :]
-            # 评价结果 = 评价结果[:, - 1, :]
-            评价结果 = T.squeeze(评价结果)
-            分布 = Categorical(分布)
-            #熵损失 = torch.mean(分布.entropy())
-            新_动作概率s = 分布.log_prob(动作s)
-            # 旧_动作概率s=旧_动作概率s.exp()
-            # 概率比 = 新_动作概率s / 旧_动作概率s
-            # # prob_ratio = (new_probs - old_probs).exp()
-            # 加权概率 = 优势函数值 * 概率比
-            # 加权_裁剪_概率 = T.clamp(概率比, 1 - self.策略裁剪幅度,
-            #                    1 + self.策略裁剪幅度) * 优势函数值
-            # 动作损失 = -T.min(加权概率, 加权_裁剪_概率).mean()
-            #概率比2 = 新_动作概率s.mean() / 旧_动作概率s.mean()
-            总回报 = 优势函数值  # + 价值
-            动作损失 = -总回报 * 新_动作概率s
-            动作损失 = 动作损失.mean()
-            #评价损失 = (总回报 - 评价结果) ** 2
-            #评价损失 = 评价损失.mean()
-            print(总回报[10:20], 新_动作概率s[:, 10:20].exp())
-
-            总损失 = 动作损失  # + 0.5 * 评价损失 - self.熵系数 * 熵损失
-            # print(总损失)
-
-            self.优化函数.zero_grad()
-            # self.优化函数_评论.zero_grad()
-            总损失.backward()
-            self.优化函数.step()
-        # self.优化函数_评论.step()
-
-    def 监督学习(self, 状态, 目标输出, 打印, 数_词表, 操作_分_torch, device):
-        分布, 价值 = self.action(状态, device)
-        lin = 分布.view(-1, 分布.size(-1))
-        _, 抽样 = torch.topk(分布, k=1, dim=-1)
-        抽样np = 抽样.cpu().numpy()
-
-        self.优化函数.zero_grad()
-        loss = F.cross_entropy(lin, 目标输出.contiguous().view(-1), ignore_index=-1)
-        if 打印:
-
-            print(loss)
-            打印抽样数据(数_词表, 抽样np[0:1, :, :], 操作_分_torch[0, :])
-        loss.backward()
-
-        self.优化函数.step()
-
-    def 选择动作_old(self, 状态):
-
-        # 分布,q_ = self.动作(状态)
-        # r_, 价值 = self.评论(状态)
-        输出_实际_A, 价值 = self.action(状态)
-
-        输出_实际_A = F.softmax(输出_实际_A, dim=-1)
-        输出_实际_A = 输出_实际_A[:, - 1, :]
-        抽样 = torch.multinomial(输出_实际_A, num_samples=1)
-        抽样np = 抽样.cpu().numpy()
-        return 抽样np[0, -1]
 # item是得到一个元素张量里面的元素值
 # 优势函数表达在状态s下，某动作a相对于平均而言的优势
 # GAE一般优势估计

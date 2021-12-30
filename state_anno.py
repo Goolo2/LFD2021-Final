@@ -19,7 +19,7 @@ import win32gui
 import win32ui
 import win32con
 from utils import read_json
-from 运行辅助 import MyMNTDevice, 取图
+from utils import MyMNTDevice, 取图
 from pynput.keyboard import Key, Listener
 from pynput import keyboard
 import random
@@ -41,9 +41,9 @@ N = 15000  # 运行N次后学习
 parallel = 100
 episode = 3
 lr = 0.0003
-agent = Agent(动作数=7, 并行条目数=parallel,
-              学习率=lr, 轮数=episode,
-              输入维度=6)
+agent = Agent(action_num=7, pl_num=parallel,
+              lr=lr, episode=episode,
+              input_size=6)
 
 
 feedback_flag = True
