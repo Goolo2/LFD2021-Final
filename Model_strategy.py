@@ -16,7 +16,7 @@ import torchvision
 from config import TransformerConfig
 import torch.nn.functional as F
 from Batch import create_masks
-from 杂项 import 打印抽样数据
+from utils import 打印抽样数据
 import pickle
 import gc
 

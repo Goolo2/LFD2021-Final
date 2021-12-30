@@ -8,8 +8,8 @@ from config import GPT2Config, TransformerConfig
 from Batch import create_masks
 
 import torch.nn.functional as F
-from 取训练数据 import *
-from 杂项 import *
+from get_trainingdata import *
+from utils import *
 import os
 import random
 from Model_strategy import Transformer

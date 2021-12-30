@@ -1,431 +1,258 @@
-import os
-import torchvision
-from Batch import create_masks
-from 辅助功能 import combine_states
-
-from 取训练数据 import *
-from 杂项 import *
-
-from resnet_utils import myResnet
-from 运行辅助 import *
-from pynput.keyboard import Controller, Key, Listener
-from pynput import keyboard
-import time, threading
-from Model_strategy import Agent
-# _DEVICE_ID = '68UDU17B14011947'
-# _DEVICE_ID = 'd1cc0a52' #小米
-# _DEVICE_ID = 'emulator-5554' #雷电
-_DEVICE_ID = '127.0.0.1:7555' #mumu
-
-
-# window="RNE-AL00"
-# window="PCLM10" #雷电
-window="R11" #mumu
-
-datadir='../dataset/unused'
-if not os.path.exists(datadir):
-   os.makedirs(datadir)
-lock=threading.Lock()
-start=time.time()
-end=time.time()
-fun_start=0
-time_interval=0
-index=0
-dict={'interval_times':0,'max_interval':0.,'interval_location':[]}
-count=0
-count_dict={'first_time':0.,'first_p_to_second_r':0.}
-keyBoard_dict={'Key.enter':'\n',
-               'Key.space':' ',
-               "Key.tab":'\t'}
-
-W键按下=False
-S键按下=False
-A键按下=False
-D键按下=False
-Q键按下=False
-攻击态=False
-手动模式=False
-攻击放开=True
-AI打开=True
-操作列=[]
-自动=0
-
-N = 15000 # 运行N次后学习
-parallel = 100
-episode = 3
-lr = 0.0003
-agent = Agent(动作数=7, 并行条目数=parallel,
-          学习率=lr, 轮数=episode,
-          输入维度=6)
-
-def get_key_name(key):
-    if isinstance(key, keyboard.KeyCode):
-
-
-        return key.char
-    else:
-
-        return str(key)
-# 监听按压
-def on_press(key):
-    global fun_start,time_interval,index,dict,count,count_dict,W键按下,S键按下,A键按下,D键按下,手动模式,操作列,AI打开,攻击放开,Q键按下,攻击态
-
-    key_name=get_key_name(key)
-    操作=''
-    if key_name=='w':
-        W键按下=True
-    elif key_name=='a':
-        A键按下=True
-    elif key_name=='s':
-        S键按下=True
-    elif key_name=='d':
-        D键按下=True
-    elif key_name == 'q':
-        Q键按下=True
-    elif key_name == 'i':
-        AI打开 = bool(1 - AI打开)
-
-    elif key_name=='Key.space':
-        操作='召唤师技能'
-    elif key_name=='Key.end':
-        操作='补刀'
-    elif key_name=='Key.page_down':
-        操作='推塔'
-    elif key_name=='j':
-        操作='一技能'
-    elif key_name=='k':
-        操作='二技能'
-    elif key_name=='l':
-        操作='三技能'
-    elif key_name=='f':
-        操作='回城'
-    elif key_name=='g':
-        操作='恢复'
-    elif key_name=='h':
-        操作='召唤师技能'
-    elif key_name=='Key.left':
-        操作='一技能'
-    elif key_name=='Key.down':
-        操作='二技能'
-    elif key_name=='Key.right':
-        操作='三技能'
-    elif key_name=='Key.up' :
-        攻击态=True
-
-    lock.acquire()
-    if 操作!='':
-        操作列.append(操作)
-    lock.release()
-    #print("正在按压:", key_name)
-
-# 监听释放
-def on_release(key):
-    global start,fun_start, time_interval, index,count,count_dict,W键按下,S键按下,A键按下,D键按下,攻击放开,Q键按下,攻击态
-
-
-    key_name=get_key_name(key)
-    if key_name=='w':
-        W键按下=False
-    elif key_name=='a':
-        A键按下=False
-    elif key_name=='s':
-        S键按下=False
-    elif key_name=='d':
-        D键按下=False
-    elif key_name == 'q':
-        Q键按下 = False
-
-    elif key_name=='Key.up' :
-
-        攻击态=False
-    print("已经释放:", key_name)
-    if key == Key.esc:
-        # 停止监听
-        return False
-
-# 开始监听
-def start_listen():
-    with Listener(on_press=on_press, on_release=on_release) as listener:
-        listener.join()
-def 处理方向():
-    # W键按下 = False
-    # S键按下 = False
-    # A键按下 = False
-    # D键按下 = False
-    if Q键按下 == True:
-        return ('移动停')
-    elif W键按下 == True and S键按下 == False and A键按下 == False and D键按下 == False:
-        return ('上移')
-    elif W键按下 == False and S键按下 == True and A键按下 == False and D键按下 == False:
-        return ('下移')
-    elif W键按下 == False and S键按下 == False and A键按下 == True and D键按下 == False:
-        return ('左移')
-    elif W键按下 == False and S键按下 == False and A键按下 == False and D键按下 == True:
-        return ('右移')
-    elif W键按下 == True and S键按下 == False and A键按下 == True and D键按下 == False:
-        return ('左上移')
-    elif W键按下 == True and S键按下 == False and A键按下 == False and D键按下 == True:
-        return ('右上移')
-    elif W键按下 == False and S键按下 == True and A键按下 == True and D键按下 == False:
-        return ('左下移')
-    elif W键按下 == False and S键按下 == True and A键按下 == False and D键按下 == True:
-        return ('右下移')
-    else:
-        return ('')
-
-
-
-加三技能='d 0 559 1767 100\nc\nu 0\nc\n'
-加二技能='d 0 443 1562 100\nc\nu 0\nc\n'
-加一技能='d 0 246 1448 100\nc\nu 0\nc\n'
-购买='d 0 636 190 100\nc\nu 0\nc\n'
-# 词数词典路径="./json/词_数表.json"
-# 数_词表路径="./json/数_词表.json"
-
-操作词典={"图片号":"0","移动操作":"无移动","动作操作":"无动作"}
-th = threading.Thread(target=start_listen,)
-th.start() #启动线程
-
-# if os.path.isfile(词数词典路径) and os.path.isfile(数_词表路径):
-#     词_数表, idx_comb = 读出引索(词数词典路径, 数_词表路径)
-
-
-comb_idx_dir = "./json/comb_idx.json"
-idx_comb_dir = "./json/idx_comb.json"
-ope_com_dir="./json/ope_command.json"
-
-comb_idx = read_json(comb_idx_dir)
-idx_comb = read_json(idx_comb_dir)
-ope_command_dict = read_json(ope_com_dir)
-
-# with open(ope_com_dir, encoding='utf8') as f:
-#     ope_command_dict = json.load(f)
-
-
-
-方向表 = ['上移', '下移', '左移', '右移', '左上移', '左下移', '右上移', '右下移']
-
-
-设备 = MyMNTDevice(_DEVICE_ID)
-device = torch.device("cuda:0" if (torch.cuda.is_available()) else "cpu")
-mod = torchvision.models.resnet101(pretrained=True).eval().cuda(device).requires_grad_(False)
-resnet101 = myResnet(mod)
-
-
-while True:
-    if AI打开 :
-
-
-
-
-
-        图片路径=datadir+'/{}/'.format(str(int( time.time())) )
-        os.mkdir(图片路径)
-
-        记录文件=open(图片路径+'_操作数据.json','w+')
-
-
-
-        图片张量 = torch.Tensor(0)
-        操作张量 = torch.Tensor(0)
-
-        伪词序列 = torch.tensor(np.ones((1, 60)).astype(np.int64)).cuda(device).unsqueeze(0)
-
-        指令延时=0
-
-        操作序列 = np.ones((1, ))
-        操作序列[0]=128
-        计数 = 0
-        time_start=time.time()
-        旧指令='移动停'
-        for i in range(1000000):
-            if AI打开==False:
-                break
-            try:
-                imgA = 取图(window)
-            except:
-                AI打开 = False
-                print('取图失败')
-                break
-
-            计时开始=time.time()
-
-            if 图片张量.shape[0] == 0:
-
-
-                img = np.array(imgA)
-
-                img = torch.tensor(img).cuda(device).unsqueeze(0).permute(0, 3, 2, 1) / 255
-                _,out = resnet101(img)
-                图片张量 = out.reshape(1,6*6*2048)
-
-            elif 图片张量.shape[0] < 300:
-
-                img = np.array(imgA)
-
-                img = torch.tensor(img).cuda(device).unsqueeze(0).permute(0, 3, 2, 1) / 255
-                _,out = resnet101(img)
-                图片张量 = torch.cat((图片张量, out.reshape(1,6*6*2048)), 0)
-                操作序列 = np.append(操作序列, 动作)
-
-            else:
-
-
-                img = np.array(imgA)
-
-                img = torch.tensor(img).cuda(device).unsqueeze(0).permute(0, 3, 2, 1) / 255
-                _,out = resnet101(img)
-                图片张量 = 图片张量[1:300, :]
-                操作序列=操作序列[1:300]
-                操作序列 = np.append(操作序列, 动作)
-                图片张量 = torch.cat((图片张量, out.reshape(1,6*6*2048)), 0)
-
-
-            操作张量 = torch.tensor(操作序列.astype(np.int64)).cuda(device)
-            src_mask, trg_mask = create_masks(操作张量.unsqueeze(0), 操作张量.unsqueeze(0), device)
-
-            状态 = combine_states(图片张量.cpu().numpy(), 操作序列, trg_mask)
-
-            动作, 动作可能性, 评价 = agent.select_action(状态,device,1,False)
-            LI = 操作张量.contiguous().view(-1)
-            # LA=输出_实际_A.view(-1, 输出_实际_A.size(-1))
-            if 计数 % 50 == 0 and 计数!=0:
-
-                设备.发送(购买)
-                设备.发送(加三技能)
-                设备.发送(加二技能)
-                设备.发送(加一技能)
-                设备.发送(ope_command_dict['移动停'])
-                print(旧指令,'周期')
-                time.sleep(0.02)
-                设备.发送(ope_command_dict[旧指令])
-
-
-            if 计数 % 1 == 0:
-                time_end = time.time()
-
-
-
-
-                指令=idx_comb[str(动作)]
-                指令集=指令.split('_')
-
-                #操作词典 = {"图片号": "0", "移动操作": "无移动", "动作操作": "无动作"}
-                操作词典['图片号']=str(i)
-                方向结果=处理方向()
-                if 方向结果!='' or len(操作列)!=0 or 攻击态==True:
-                    if 方向结果 == '':
-                        操作词典['移动操作'] = 指令集[0]
-                    else:
-                        操作词典['移动操作']=方向结果
-
-
-                    if len(操作列)!=0:
-                        操作词典['动作操作'] = 操作列[0]
-                        lock.acquire()
-                        del 操作列[0]
-                        lock.release()
-                    elif 攻击态==True:
-                        操作词典['动作操作'] = '攻击'
-
-                    else:
-                        操作词典['动作操作'] ='无动作'
-
-
-                    路径_a = 图片路径 + '{}.jpg'.format(str(i))
-                    imgA.save(路径_a)
-                    if 自动==0:
-                        操作词典['结束']=1
-                    else:
-                        操作词典['结束'] = 0
-                    自动 = 1
-                    json.dump(操作词典, 记录文件, ensure_ascii=False)
-                    记录文件.write('\n')
-
-                    新指令 = 操作词典['移动操作']
-                    if 新指令 != 旧指令 and 新指令 != '无移动':
-                        旧指令 = 新指令
-                        # print(旧指令,操作查询词典[旧指令])
-                        try:
-                            print('手动模式',旧指令)
-
-                            设备.发送(ope_command_dict[旧指令])
-
-                        except:
-                            AI打开 = False
-                            print('发送失败')
-                            break
-
-                        time.sleep(0.01)
-
-                    if 操作词典['动作操作'] != '无动作' and 操作词典['动作操作'] != '发起集合' and 操作词典['动作操作'] != '发起进攻' and 操作词典['动作操作'] != '发起撤退':
-                        print('手动',指令集[1])
-                        try:
-                            设备.发送(ope_command_dict[操作词典['动作操作']])
-                        except:
-                            AI打开 = False
-                            print('发送失败')
-                            break
-                else:
-                    操作列=[]
-                    操作词典['移动操作'] = 指令集[0]
-                    操作词典['动作操作'] = 指令集[1]
-
-                    新指令 = 指令集[0]
-                    if 新指令 != 旧指令 and 新指令 != '无移动':
-                        旧指令 = 新指令
-                        # print(旧指令,操作查询词典[旧指令])
-                        try:
-                            print(旧指令)
-
-                            设备.发送(ope_command_dict[旧指令])
-
-                        except:
-                            AI打开 = False
-                            print('发送失败')
-                            break
-
-
-                        time.sleep(0.01)
-                    路径_a = 图片路径 + '{}.jpg'.format(str(i))
-                    imgA.save(路径_a)
-                    自动 = 0
-                    操作词典['结束'] = 0
-                    json.dump(操作词典, 记录文件, ensure_ascii=False)
-                    记录文件.write('\n')
-
-                    新指令 = 操作词典['移动操作']
-                    if 指令集[1] != '无动作' and 指令集[1] != '发起集合' and 指令集[1] != '发起进攻' and 指令集[1] != '发起撤退':
-                        print(指令集[1])
-                        try:
-                            设备.发送(ope_command_dict[指令集[1]])
-                        except:
-                            AI打开 = False
-                            print('发送失败')
-                            break
-                用时1=0.22-(time.time()-计时开始)
-                if 用时1>0:
-                    time.sleep(用时1)
-
-                #print(用时1)
-                用时 = time_end - time_start
-                #print("用时{} 第{}张 延时{}".format(用时, i,用时1),'A键按下', A键按下, 'W键按下', W键按下, 'S键按下', S键按下, 'D键按下', D键按下, '旧指令', 旧指令, 'AI打开', AI打开, '操作列', 操作列)
-
-                计数=计数+1
-                if i%3000==0:
-                   # AI打开 = False
-                    #import pygame
-
-                    # pygame.mixer.init()
-                    # pygame.mixer.music.load('G:/AS.mp3')
-                    # pygame.mixer.music.set_volume(0.2)
-                    # pygame.mixer.music.play()
-                    print("此处可有音乐")
-                    time.sleep(1)
-
-
-
-    记录文件.close()
-    time.sleep(1)
-    print('AI打开',AI打开)
-
+import json
+import numpy as np
+# def 读取训练数据(路径):
+#     输入表单 = []
+#     输出表单 = []
+#     with open(路径, encoding='utf-8') as f:
+#         while True:
+#             行 = f.readline()
+#             if not 行:
+#                 break
+#             json_行 = json.loads(行)
+
+#             内容 = json_行['内容______']
+#             内容_输入 = 内容['输入______']
+#             内容_输出 = 内容['输出______']
+#             #这里的数据还得进行分割先暂时分割成16份吧
+#             单元长度 = len(内容_输入)//16
+#             for i in range(16):
+#                 #print(内容_输入[i*单元长度:(i+1)*单元长度])
+#                 输入表单.append(内容_输入[i*单元长度:(i+1)*单元长度])
+#                 输出表单.append(内容_输出[i*单元长度:(i+1)*单元长度])
+#     return 输入表单, 输出表单
+
+
+# def 写出词标号引索(总词表,  词_数表路径, 数_词表路径):
+#     print("正在写出词的标号引索数据可能需要较长时间")
+#     标号_到_字符 = {}
+#     字符_到_标号 = {}
+#     标号_字符 = []
+
+#     # 标号_到_字符 = list(set(总表单))
+#     i = 0
+#     j = 0
+#     for 词表 in 总词表:
+#         j = j + 1
+#         for 字符 in 词表:
+
+#             if 字符 not in 标号_字符:
+#                 标号_字符.append(字符)
+#                 字符_到_标号[字符] = i
+#                 标号_到_字符[i] = 字符
+#                 i = i + 1
+#         if j % 10000 == 0:
+#             print(i, 标号_到_字符[i - 1],  j/len(总词表))
+
+#     #print(标号_到_字符[1], 标号_到_字符[111], len(标号_到_字符))
+#     with open(词_数表路径, 'w', encoding='utf-8') as f:
+#         json.dump(字符_到_标号, f, ensure_ascii=False)
+#     with open(数_词表路径, 'w', encoding='utf-8') as f:
+#         json.dump(标号_到_字符, f, ensure_ascii=False)
+
+# def 读出引索(词_数表路径, 数_词表路径):
+#     with open(词_数表路径, encoding='utf-8') as f:
+#         词_数表= json.load(f)
+
+#     with open(数_词表路径, encoding='utf-8') as f:
+#         数_词表 = json.load(f)
+#     return 词_数表, 数_词表
+
+# def read_json(comb_idx_dir, idx_comb_dir):
+#     with open(comb_idx_dir, encoding='utf-8') as f:
+#         词_数表= json.load(f)
+
+#     with open(idx_comb_dir, encoding='utf-8') as f:
+#         数_词表 = json.load(f)
+#     return 词_数表, 数_词表
+
+
+# def 生成训练用numpy数组(输入表单, 词_数表, numpy数组路径):
+#     表_1 = []
+
+#     表_2 = []
+
+#     i = 0
+#     临 = ''
+#     for 表单 in 输入表单:
+#         表_3 = []
+#         for 字符 in 表单:
+#             if (u'\u0041' <= 字符 <= u'\u005a') or (u'\u0061' <= 字符 <= u'\u007a'):
+#                 if 临 == '':
+
+#                     临 = 字符
+#                 else:
+#                     临 = 临 + 字符
+#             else:
+
+#                 if 临 == '':
+
+#                     if 字符.lower() in 词_数表:
+
+#                         表_3.append(词_数表[字符.lower()])
+#                     else:
+#                         表_3.append(14999)
+#                 else:
+#                     if 临.lower() in 词_数表:
+
+#                         表_3.append(词_数表[临.lower()])
+#                     else:
+#                         表_3.append(14999)
+#                     临 = ''
+#                     if 字符.lower() in 词_数表:
+
+#                         表_3.append(词_数表[字符.lower()])
+#                     else:
+#                         表_3.append(14999)
+#         if 临 != '':
+#             if 临.lower() in 词_数表:
+
+#                 表_3.append(词_数表[临.lower()])
+#             else:
+#                 表_3.append(14999)
+#             临 = ''
+
+#         if len(表_3) != 667:
+#             # 表_1.append(np.array(表_3[0:-1]))
+#             # 表_2.append(np.array(表_3[1:]))
+#             print(表_3)
+#         else:
+
+#             表_1.append(np.array(表_3[0:-1]))
+#             表_2.append(np.array(表_3[1:]))
+#         if i % 1000 == 0:
+#             print("数据转化为numpy数组完成度百分比{}".format(i / len(输入表单) * 100))
+#         i = i + 1
+#     print("数据转化为numpy数组完成。")
+
+#     输入np = np.array(表_1)
+#     输出np = np.array(表_2)
+#     np.savez(numpy数组路径, 输出np=输出np, 输入np=输入np)
+
+
+# def 生成测试用numpy数组(输入表单, 词_数表):
+#     表_1 = []
+
+#     for 字符 in 输入表单:
+#         if 字符.lower() in 词_数表:
+#             表_1.append(词_数表[字符])
+#         else:
+#             表_1.append(14999)
+#     输入np = np.array(表_1)
+#     return (输入np)
+
+
+# def 生成训练用numpy数组_A(输入表单,  词_数表, numpy数组路径):
+#     表_1 = []
+
+#     表_2 = []
+
+#     i = 0
+#     临 = ''
+#     for 表单 in 输入表单:
+#         表_3 = []
+#         for 字符 in 表单:
+#             if (u'\u0041' <= 字符 <= u'\u005a') or (u'\u0061' <= 字符 <= u'\u007a'):
+#                 if 临 == '':
+
+#                     临 = 字符
+#                 else:
+#                     临 = 临 + 字符
+#             else:
+
+#                 if 临 == '':
+
+#                     if 字符.lower() in 词_数表:
+#                         if 字符 != ' ':
+#                             表_3.append(词_数表[字符.lower()])
+#                     else:
+#                         表_3.append(14999)
+#                 else:
+#                     if 临.lower() in 词_数表:
+#                         if 临 != ' ':
+#                             表_3.append(词_数表[临.lower()])
+#                     else:
+#                         表_3.append(14999)
+#                     临 = ''
+#                     if 字符.lower() in 词_数表:
+#                         if 字符 != ' ':
+#                             表_3.append(词_数表[字符.lower()])
+#                     else:
+#                         表_3.append(14999)
+#         if 临 != '':
+#             if 临.lower() in 词_数表:
+#                 if 字符 != ' ':
+#                     表_3.append(词_数表[临.lower()])
+#             else:
+#                 表_3.append(14999)
+#             临 = ''
+
+#         if len(表_3) != 667:
+#             # 表_1.append(np.array(表_3[0:-1]))
+#             # 表_2.append(np.array(表_3[1:]))
+#             print(表_3)
+#         else:
+
+#             表_1.append(np.array(表_3[0:-1]))
+#             表_2.append(np.array(表_3[1:]))
+#         if i % 1000 == 0:
+#             print("数据转化为numpy数组完成度百分比{}".format(i/len(输入表单)*100))
+#         i = i + 1
+#     print("数据转化为numpy数组完成。")
+
+#     输入np = np.array(表_1)
+#     输出np = np.array(表_2)
+#     np.savez(numpy数组路径, 输出np=输出np, 输入np=输入np)
+
+
+# def 读取训练数据_A(路径):
+#     输入表单 = []
+#     with open(路径, encoding='utf-8') as f:
+#         while True:
+#             行 = f.readline()
+#             if not 行:
+#                 break
+#             json_行 = json.loads(行)
+
+#             内容 = json_行['input']
+#             输入表单.append(内容)
+
+#     return 输入表单
+
+
+# def 生成测试用numpy数组_A(输入表单, 词_数表):
+#     表_3 = []
+#     临 = ''
+
+#     for 字符 in 输入表单:
+#         if 字符.lower() in 词_数表:
+#             if (u'\u0041' <= 字符 <= u'\u005a') or (u'\u0061' <= 字符 <= u'\u007a'):
+#                 if 临 == '':
+
+#                     临 = 字符
+#                 else:
+#                     临 = 临 + 字符
+#             else:
+
+#                 if 临 == '':
+
+#                     if 字符.lower() in 词_数表:
+#                         if 字符.lower() != ' ':
+#                             表_3.append(词_数表[字符.lower()])
+#                     else:
+#                         表_3.append(14999)
+#                 else:
+#                     if 临.lower() in 词_数表:
+#                         if 临.lower() != ' ':
+
+#                             表_3.append(词_数表[临.lower()])
+#                     else:
+#                         表_3.append(14999)
+#                     临 = ''
+#                     if 字符.lower() in 词_数表:
+#                         if 字符.lower() != ' ':
+
+#                             表_3.append(词_数表[字符.lower()])
+#                     else:
+#                         表_3.append(14999)
+#     输入np = np.array(表_3)
+#     return (输入np)

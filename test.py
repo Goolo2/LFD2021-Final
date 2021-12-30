@@ -1,4 +1,4 @@
-import numpy as np
+# import numpy as np
 import random
 import torch
 
@@ -6,5 +6,61 @@ import torch
 # k = np.array([1, 2, 3])
 # x = torch.from_numpy(state['ope_seq'].astype(np.int64)).cuda(device)
 
-if (torch.cuda.is_available()):
-    print('fuck')
+from PyQt5.QtWidgets import QApplication
+import win32gui, win32ui, win32con
+from PIL import Image, ImageQt
+# import win32gui
+import sys
+import numpy as np
+
+
+# window = win32gui.FindWindow(0,'R11')
+# app = QApplication(sys.argv)
+# screen = app.primaryScreen()
+# img = screen.grabWindow(window)
+# image = ImageQt.fromqimage(img)
+# # image = image.resize((640, 360))
+# image = image.resize((960, 480))
+# image.show()
+# 图片数组=np.asarray(image)
+
+
+# 获取后台窗口的句柄，注意后台窗口不能最小化
+hWnd = win32gui.FindWindow(0,'R11')  # 窗口的类名可以用Visual Studio的SPY++工具获取
+# 获取句柄窗口的大小信息
+left, top, right, bot = win32gui.GetWindowRect(hWnd)
+width = right - left
+height = bot - top
+# 返回句柄窗口的设备环境，覆盖整个窗口，包括非客户区，标题栏，菜单，边框
+hWndDC = win32gui.GetWindowDC(hWnd)
+# 创建设备描述表
+mfcDC = win32ui.CreateDCFromHandle(hWndDC)
+# 创建内存设备描述表
+saveDC = mfcDC.CreateCompatibleDC()
+# 创建位图对象准备保存图片
+saveBitMap = win32ui.CreateBitmap()
+# 为bitmap开辟存储空间
+saveBitMap.CreateCompatibleBitmap(mfcDC, width, height)
+# 将截图保存到saveBitMap中
+saveDC.SelectObject(saveBitMap)
+# 保存bitmap到内存设备描述表
+saveDC.BitBlt((0, 0), (width, height), mfcDC, (0, 0), win32con.SRCCOPY)
+
+
+bmpinfo = saveBitMap.GetInfo()
+bmpstr = saveBitMap.GetBitmapBits(True)
+###生成图像
+im_PIL = Image.frombuffer('RGB',(bmpinfo['bmWidth'],bmpinfo['bmHeight']),bmpstr,'raw','BGRX')
+#im_PIL= Image.frombuffer('RGB', (bmpinfo['bmWidth'], bmpinfo['bmHeight']), bmpstr)
+#im_PIL =Image.frombytes('RGB',(bmpinfo['bmWidth'],bmpinfo['bmHeight']),bmpstr)
+box = (8,31,968,511)
+im2 = im_PIL.crop(box)
+print(im_PIL.size)
+print(im2.size)
+im_PIL.show()
+im2.show()
+#im2.save('./dd2d.jpg')
+win32gui.DeleteObject(saveBitMap.GetHandle())
+saveDC.DeleteDC()
+mfcDC.DeleteDC()
+win32gui.ReleaseDC(hWnd, hWndDC)

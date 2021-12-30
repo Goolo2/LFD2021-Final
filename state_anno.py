@@ -6,7 +6,7 @@ import threading
 import cv2
 import torch
 import numpy as np
-from 辅助功能 import combine_states
+from utils import combine_states
 import torchvision
 from resnet_utils import myResnet
 from Model_strategy import Agent
@@ -18,7 +18,7 @@ import os
 import win32gui
 import win32ui
 import win32con
-from 取训练数据 import read_json
+from utils import read_json
 from 运行辅助 import MyMNTDevice, 取图
 from pynput.keyboard import Key, Listener
 from pynput import keyboard
@@ -95,7 +95,7 @@ idx_comb = read_json(idx_comb_dir)
 ope_command_dict = read_json(ope_com_dir)
 
 direct_sheet = ['上移', '下移', '左移', '右移', '左上移', '左下移', '右上移', '右下移']
-devices = MyMNTDevice(_DEVICE_ID)
+simulator = MyMNTDevice(_DEVICE_ID)
 old_command = '移动停'
 
 press1 = False
@@ -255,14 +255,14 @@ for i in range(6666666):
 
         # 周期性加一二三技能，并且停止移动
         if count % 50 == 0 and count != 0:
-            devices.发送(buy)
-            devices.发送(add_third_skill)
-            devices.发送(add_sec_skill)
-            devices.发送(add_fst_skill)
-            devices.发送(ope_command_dict['移动停'])
+            simulator.发送(buy)
+            simulator.发送(add_third_skill)
+            simulator.发送(add_sec_skill)
+            simulator.发送(add_fst_skill)
+            simulator.发送(ope_command_dict['移动停'])
             print(old_command, '周期')
             time.sleep(0.02)
-            devices.发送(ope_command_dict[old_command])
+            simulator.发送(ope_command_dict[old_command])
 
         # 读取action 发送到设备
         command = idx_comb[str(action)]
@@ -279,11 +279,11 @@ for i in range(6666666):
             ope_dict['move_ope'] = command_set[0]
             ope_dict['act_ope'] = command_set[1]
             old_command = command_set[0]
-            devices.发送(ope_command_dict[command_set[0]])
+            simulator.发送(ope_command_dict[command_set[0]])
 
         time.sleep(0.01)
         if command_set[1] != '无动作' and command_set[1] != '发起集合' and command_set[1] != '发起进攻' and command_set[1] != '发起撤退':
-            devices.发送(ope_command_dict[command_set[1]])
+            simulator.发送(ope_command_dict[command_set[1]])
 
 
 #状态辞典={'击杀小兵或野怪或推掉塔': 1, '击杀敌方英雄': 5, '被击塔攻击': -2, '被击杀': -5,'无状况': 0, '死亡': 0, '其它': -0.03,'普通': 0}
