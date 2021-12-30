@@ -1,3 +1,11 @@
+'''
+@File    :   check_json.py
+@Time    :   2021/12/29 22:12:54
+@Author  :   goole 
+@Version :   1.0
+@Discrib :   检查mintouch的指令控制
+'''
+
 import json
 from 运行辅助 import *
 import os

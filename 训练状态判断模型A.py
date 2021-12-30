@@ -54,7 +54,7 @@ optimizer = torch.optim.Adam(model_判断状态.parameters(), lr=6.25e-5, betas=
 状态列表=[]
 for K in 状态辞典:
     状态列表.append(K)
-with open(路径json, encoding='ansi') as f:
+with open(路径json, 'w', encoding='ansi') as f:
     while True:
         df = f.readline()
         df = df.replace('\'', '\"')
@@ -101,9 +101,11 @@ for i in range(100):
         loss.backward()
 
         optimizer.step()
-    torch.save(model_判断状态.state_dict(), 'weights/model_weights_判断状态L')
+        
+    # torch.save(model_判断状态.state_dict(), 'weights/model_weights_判断状态L')
 
-    torch.save(model_判断状态.state_dict(), 'weights/model_weights_判断状态L{}'.format(str(i)))
+    # torch.save(model_判断状态.state_dict(), 'weights/model_weights_判断状态L{}'.format(str(i)))
+    torch.save(model_判断状态.state_dict(), 'weights/model_weights_newcxc{}'.format(str(i)))
 
 
 

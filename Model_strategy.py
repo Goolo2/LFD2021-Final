@@ -205,7 +205,7 @@ def 处理状态参数(状态组, device):
         if 状态A['图片张量'].shape[1] == 最长:
             单元 = 状态A
             操作序列 = np.ones((最长,))
-            遮罩序列 = torch.from_numpy(操作序列.astype(np.int64)).cuda(device).unsqueeze(0)
+            遮罩序列 = torch.tensor(操作序列.astype(np.int64)).cuda(device).unsqueeze(0)
             单元['遮罩序列'] = 遮罩序列
 
         else:
@@ -229,10 +229,10 @@ def 处理状态参数(状态组, device):
             状态A['速度张量_序列'] = torch.cat((状态A['速度张量_序列'], 速度张量_拼接), 1)
 
             操作序列 = np.ones((有效长度,))
-            遮罩序列 = torch.from_numpy(操作序列.astype(np.int64)).cuda(device).unsqueeze(0)
+            遮罩序列 = torch.tensor(操作序列.astype(np.int64)).cuda(device).unsqueeze(0)
             状态A['遮罩序列'] = 遮罩序列
             操作序列 = np.ones((差值,))*-1
-            遮罩序列 = torch.from_numpy(操作序列.astype(np.int64)).cuda(device).unsqueeze(0)
+            遮罩序列 = torch.tensor(操作序列.astype(np.int64)).cuda(device).unsqueeze(0)
             状态A['遮罩序列'] = torch.cat((状态A['遮罩序列'], 遮罩序列), 1)
             单元 = 状态A
 
@@ -305,38 +305,38 @@ class Agent:
         self.action.载入权重()
         # self.评价.载入权重()
 
-    def 选择动作(self, 状态, device, 传入动作, 手动=False):
+    def select_action(self, state, device, input_action, flag=False):
 
         # 分布,q_ = self.动作(状态)
         # r_, 价值 = self.评论(状态)
         self.action.requires_grad_(False)
-        操作序列 = torch.from_numpy(状态['操作序列'].astype(np.int64)).cuda(device)
-        图片张量 = torch.from_numpy(状态['图片张量']).cuda(device)
-        trg_mask = 状态['trg_mask']
-        分布, 价值 = self.action(图片张量, 操作序列, trg_mask)
-        价值 = 价值[:, - 1, :]
-        分布 = F.softmax(分布, dim=-1)
-        分布 = 分布[:, - 1, :]
-        分布 = Categorical(分布)
-        if 手动:
-            动作 = 传入动作
+        ope_seq = torch.tensor(state['ope_seq'].astype(np.int64)).cuda(device)
+        img_tensor = torch.tensor(state['img_tensor']).cuda(device)
+        trg_mask = state['trg_mask']
+        dist, value = self.action(img_tensor, ope_seq, trg_mask)
+        value = value[:, - 1, :]
+        dist = F.softmax(dist, dim=-1)
+        dist = dist[:, - 1, :]
+        dist = Categorical(dist)
+        if flag:
+            action = input_action
         else:
 
-            动作 = 分布.sample()
+            action = dist.sample()
 
-        动作概率 = T.squeeze(分布.log_prob(动作)).item()
+        action_prob = T.squeeze(dist.log_prob(action)).item()
 
-        动作 = T.squeeze(动作).item()
+        action = T.squeeze(action).item()
 
-        return 动作, 动作概率, 价值
+        return action, action_prob, value
 
     def select_action_batch(self, state, device, tgtoutput_score_tensor, flag=False):
 
         # 分布,q_ = self.动作(状态)
         # r_, 价值 = self.评论(状态)
         self.action.requires_grad_(False)
-        ope_seq = torch.from_numpy(state['ope_seq'].astype(np.int64)).cuda(device)
-        img_tensor = torch.from_numpy(state['img_tensor']).cuda(device)
+        ope_seq = torch.tensor(state['ope_seq'].astype(np.int64)).cuda(device)
+        img_tensor = torch.tensor(state['img_tensor']).cuda(device)
         trg_mask = state['trg_mask']
 
         dist, value = self.action(img_tensor, ope_seq, trg_mask)
@@ -395,8 +395,8 @@ class Agent:
 
                     self.action.requires_grad_(True)
 
-                    操作序列 = torch.from_numpy(动作数组[条].astype(np.int64)).cuda(device)
-                    图片张量 = torch.from_numpy(图片集合[:, 条, :]).cuda(device).float()
+                    操作序列 = torch.tensor(动作数组[条].astype(np.int64)).cuda(device)
+                    图片张量 = torch.tensor(图片集合[:, 条, :]).cuda(device).float()
                     src_mask, trg_mask = create_masks(操作序列.unsqueeze(0), 操作序列.unsqueeze(0), device)
                     分布, 评价结果 = self.action(图片张量, 操作序列, trg_mask)
                     分布 = 分布[:, -1:, :]
@@ -465,8 +465,8 @@ class Agent:
 
             self.action.requires_grad_(True)
 
-            ope_seq = torch.from_numpy(state['ope_seq'].astype(np.int64)).cuda(device)
-            img_tensor = torch.from_numpy(state['img_tensor']).cuda(device).float()
+            ope_seq = torch.tensor(state['ope_seq'].astype(np.int64)).cuda(device)
+            img_tensor = torch.tensor(state['img_tensor']).cuda(device).float()
             trg_mask = state['trg_mask']
 
             分布, 评价结果 = self.action(img_tensor, ope_seq, trg_mask)
@@ -532,8 +532,8 @@ class Agent:
 
             self.action.requires_grad_(True)
 
-            操作序列 = torch.from_numpy(状态['操作序列'].astype(np.int64)).cuda(device)
-            图片张量 = torch.from_numpy(状态['图片张量']).cuda(device).float()
+            操作序列 = torch.tensor(状态['操作序列'].astype(np.int64)).cuda(device)
+            图片张量 = torch.tensor(状态['图片张量']).cuda(device).float()
             trg_mask = 状态['trg_mask']
 
             分布, 评价结果 = self.action(图片张量, 操作序列, trg_mask)

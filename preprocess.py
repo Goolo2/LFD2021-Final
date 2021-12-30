@@ -56,7 +56,7 @@ for folder in dirs:
                 img = Image.open(records+'/' + folder + '/{}.jpg'.format(df["图片号"]))
                 img2 = np.array(img)
 
-                img2 = torch.from_numpy(img2).cuda(device).unsqueeze(0).permute(0, 3, 2, 1) / 255
+                img2 = torch.tensor(img2).cuda(device).unsqueeze(0).permute(0, 3, 2, 1) / 255
                 _, out = resnet101(img2)
                 img_tensor = out.reshape(1, 6*6*2048)
                 tmp_move = df["移动操作"]
@@ -69,7 +69,7 @@ for folder in dirs:
                 img = Image.open(records+'/' + folder + '/{}.jpg'.format(df["图片号"]))
                 img2 = np.array(img)
 
-                img2 = torch.from_numpy(img2).cuda(device).unsqueeze(0).permute(0, 3, 2, 1) / 255
+                img2 = torch.tensor(img2).cuda(device).unsqueeze(0).permute(0, 3, 2, 1) / 255
                 _, out = resnet101(img2)
 
                 img_tensor = torch.cat((img_tensor, out.reshape(1, 6*6*2048)), 0)

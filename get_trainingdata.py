@@ -1,7 +1,7 @@
 import os
 import torchvision
 from Batch import create_masks
-from 辅助功能 import 状态信息综合
+from 辅助功能 import combine_states
 
 from 取训练数据 import *
 from 杂项 import *
@@ -51,11 +51,11 @@ AI打开=True
 自动=0
 
 N = 15000 # 运行N次后学习
-条数 = 100
-轮数 = 3
-学习率 = 0.0003
-agent = Agent(动作数=7, 并行条目数=条数,
-          学习率=学习率, 轮数=轮数,
+parallel = 100
+episode = 3
+lr = 0.0003
+agent = Agent(动作数=7, 并行条目数=parallel,
+          学习率=lr, 轮数=episode,
           输入维度=6)
 
 def get_key_name(key):
@@ -181,7 +181,7 @@ def 处理方向():
 购买='d 0 636 190 100\nc\nu 0\nc\n'
 # 词数词典路径="./json/词_数表.json"
 # 数_词表路径="./json/数_词表.json"
-ope_com_dir="./json/ope_command.json"
+
 操作词典={"图片号":"0","移动操作":"无移动","动作操作":"无动作"}
 th = threading.Thread(target=start_listen,)
 th.start() #启动线程
@@ -192,7 +192,7 @@ th.start() #启动线程
 
 comb_idx_dir = "./json/comb_idx.json"
 idx_comb_dir = "./json/idx_comb.json"
-
+ope_com_dir="./json/ope_command.json"
 
 comb_idx = read_json(comb_idx_dir)
 idx_comb = read_json(idx_comb_dir)
@@ -284,7 +284,7 @@ while True:
             操作张量 = torch.from_numpy(操作序列.astype(np.int64)).cuda(device)
             src_mask, trg_mask = create_masks(操作张量.unsqueeze(0), 操作张量.unsqueeze(0), device)
 
-            状态 = 状态信息综合(图片张量.cpu().numpy(), 操作序列, trg_mask)
+            状态 = combine_states(图片张量.cpu().numpy(), 操作序列, trg_mask)
 
             动作, 动作可能性, 评价 = agent.选择动作(状态,device,1,False)
             LI = 操作张量.contiguous().view(-1)

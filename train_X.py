@@ -119,11 +119,11 @@ for j in range(100):
                     tgtoutput_branch = np.array(tgtoutput_score_table[i * branch: len(tgtoutput_score_table)])
                     loop = False
 
-                ope_score_tensor = torch.from_numpy(ope_branch).cuda(device)
+                ope_score_tensor = torch.tensor(ope_branch).cuda(device)
                 ope_seqA = np.ones_like(ope_branch)
-                ope_seqA_tensor = torch.from_numpy(ope_seqA).cuda(device)
-                pic_score_tensor = torch.from_numpy(pic_branch).cuda(device)
-                tgtoutput_score_tensor = torch.from_numpy(tgtoutput_branch).cuda(device)
+                ope_seqA_tensor = torch.tensor(ope_seqA).cuda(device)
+                pic_score_tensor = torch.tensor(pic_branch).cuda(device)
+                tgtoutput_score_tensor = torch.tensor(tgtoutput_branch).cuda(device)
 
                 src_mask, trg_mask = create_masks(ope_score_tensor, ope_score_tensor, device)  # TODO:??
                 if pic_score_tensor.shape[0] != ope_score_tensor.shape[0]:

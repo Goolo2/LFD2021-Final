@@ -1,3 +1,11 @@
+'''
+@File    :   get_coor.py
+@Time    :   2021/12/29 22:12:04
+@Author  :   goole 
+@Version :   1.0
+@Discrib :   minitouch要控制的每个按键的获得坐标
+'''
+
 import cv2 as cv
 
 maxsize = (2160, 1080)  # 定义图片放缩大小
