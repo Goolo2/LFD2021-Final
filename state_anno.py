@@ -34,9 +34,9 @@ window = win32gui.FindWindow(0, window)
 device = torch.device("cuda:0" if (torch.cuda.is_available()) else "cpu")
 mod = torchvision.models.resnet101(pretrained=True).eval().cuda(device).requires_grad_(False)
 resnet101 = myResnet(mod)
-model_判断状态 = Transformer(6, 768, 2, 12, 0.0, 6*6*2048)
-model_判断状态.load_state_dict(torch.load('weights/model_weights_判断状态L'))
-model_判断状态.cuda(device)
+model_judge_state = Transformer(6, 768, 2, 12, 0.0, 6*6*2048)
+model_judge_state.load_state_dict(torch.load('weights/model_weights_判断状态L'))
+model_judge_state.cuda(device)
 N = 15000  # 运行N次后学习
 parallel = 100
 episode = 3
@@ -62,7 +62,7 @@ time.sleep(1)
 app = QApplication(sys.argv)
 screen = app.primaryScreen()
 
-data_save_dir = '../training_data2'
+# data_save_dir = '../training_data2'
 time_start = 0
 
 
@@ -224,7 +224,7 @@ for i in range(6666666):
         src_mask, trg_mask = create_masks(ope_tensorA.unsqueeze(0), ope_tensorA.unsqueeze(0), device)
         outA = out.detach()
 
-        real_output, _ = model_判断状态(outA.unsqueeze(0), ope_tensorA.unsqueeze(0), trg_mask)
+        real_output, _ = model_judge_state(outA.unsqueeze(0), ope_tensorA.unsqueeze(0), trg_mask)
         #实际输出=model_判断状态(out, 操作张量.unsqueeze(0),trg_mask)
         _, sample = torch.topk(real_output, k=1, dim=-1)
         sample_np = sample.cpu().numpy()
@@ -242,8 +242,10 @@ for i in range(6666666):
             ope_seq = np.append(ope_seq, action)
             img_tensor = torch.cat((img_tensor, out), 0)
 
-        ope_seq = torch.tensor(ope_seq.astype(np.int64)).cuda(device)
-        src_mask, trg_mask = create_masks(ope_seq.unsqueeze(0), ope_seq.unsqueeze(0), device)
+        ope_seqB = torch.tensor(ope_seq.astype(np.int64)).cuda(device)
+        # ope_seqB = ope_seq.astype(np.)
+        # src_mask, trg_mask = create_masks(ope_seq.unsqueeze(0), ope_seq.unsqueeze(0), device)
+        src_mask, trg_mask = create_masks(ope_seqB.unsqueeze(0), ope_seqB.unsqueeze(0), device)
 
         cur_state = combine_states(img_tensor.cpu().numpy(), ope_seq, trg_mask)
         end = False
@@ -338,8 +340,8 @@ for i in range(6666666):
         else:
             print('其它得分', score)
 
-        cur_state['图片张量'] = cur_state['图片张量'][:, -1:, :]
-        cur_state['操作序列'] = cur_state['操作序列'][-1:]
+        cur_state['img_tensor'] = cur_state['img_tensor'][:, -1:, :]
+        cur_state['ope_seq'] = cur_state['ope_seq'][-1:]
         cur_state['trg_mask'] = 0
         #智能体.记录数据(状态, 动作, 动作可能性, 评价, 得分, 完结,计数)
 
@@ -349,7 +351,7 @@ for i in range(6666666):
 
         count = count + 1
         if count % 10 == 0:
-            print(time_cost)
+            print('time cost = {}'.format(time_cost))
 
         if contflag is False:
 

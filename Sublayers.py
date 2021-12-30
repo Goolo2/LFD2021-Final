@@ -90,7 +90,7 @@ class FeedForward(nn.Module):
         x = self.dropout(gelu(self.linear_1(x)))
         x = self.linear_2(x)
         return x
-class 全连接层(nn.Module):
+class MLP(nn.Module):
     def __init__(self,输入_接口, 输出_接口):
         super().__init__()
         np.random.seed(1)

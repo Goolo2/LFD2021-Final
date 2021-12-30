@@ -229,7 +229,7 @@ while True:
         图片张量 = torch.Tensor(0)
         操作张量 = torch.Tensor(0)
 
-        伪词序列 = torch.from_numpy(np.ones((1, 60)).astype(np.int64)).cuda(device).unsqueeze(0)
+        伪词序列 = torch.tensor(np.ones((1, 60)).astype(np.int64)).cuda(device).unsqueeze(0)
 
         指令延时=0
 
@@ -255,7 +255,7 @@ while True:
 
                 img = np.array(imgA)
 
-                img = torch.from_numpy(img).cuda(device).unsqueeze(0).permute(0, 3, 2, 1) / 255
+                img = torch.tensor(img).cuda(device).unsqueeze(0).permute(0, 3, 2, 1) / 255
                 _,out = resnet101(img)
                 图片张量 = out.reshape(1,6*6*2048)
 
@@ -263,7 +263,7 @@ while True:
 
                 img = np.array(imgA)
 
-                img = torch.from_numpy(img).cuda(device).unsqueeze(0).permute(0, 3, 2, 1) / 255
+                img = torch.tensor(img).cuda(device).unsqueeze(0).permute(0, 3, 2, 1) / 255
                 _,out = resnet101(img)
                 图片张量 = torch.cat((图片张量, out.reshape(1,6*6*2048)), 0)
                 操作序列 = np.append(操作序列, 动作)
@@ -273,7 +273,7 @@ while True:
 
                 img = np.array(imgA)
 
-                img = torch.from_numpy(img).cuda(device).unsqueeze(0).permute(0, 3, 2, 1) / 255
+                img = torch.tensor(img).cuda(device).unsqueeze(0).permute(0, 3, 2, 1) / 255
                 _,out = resnet101(img)
                 图片张量 = 图片张量[1:300, :]
                 操作序列=操作序列[1:300]
@@ -281,12 +281,12 @@ while True:
                 图片张量 = torch.cat((图片张量, out.reshape(1,6*6*2048)), 0)
 
 
-            操作张量 = torch.from_numpy(操作序列.astype(np.int64)).cuda(device)
+            操作张量 = torch.tensor(操作序列.astype(np.int64)).cuda(device)
             src_mask, trg_mask = create_masks(操作张量.unsqueeze(0), 操作张量.unsqueeze(0), device)
 
             状态 = combine_states(图片张量.cpu().numpy(), 操作序列, trg_mask)
 
-            动作, 动作可能性, 评价 = agent.选择动作(状态,device,1,False)
+            动作, 动作可能性, 评价 = agent.select_action(状态,device,1,False)
             LI = 操作张量.contiguous().view(-1)
             # LA=输出_实际_A.view(-1, 输出_实际_A.size(-1))
             if 计数 % 50 == 0 and 计数!=0:
