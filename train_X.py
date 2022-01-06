@@ -55,9 +55,9 @@ N = 15000  # 运行N次后学习
 parallel = 100
 episode = 3
 lr = 0.0003
-agent = Agent(action_num=7, pl_num=parallel,
-              lr=lr, episode=episode,
-              input_size=6)
+agent = Agent(动作数=7, 并行条目数=parallel,
+              学习率=lr, 轮数=episode,
+              输入维度=6)
 
 
 chunksize = 600
@@ -136,10 +136,12 @@ for j in range(100):
 
                 # TODO: 这里开了手动的flag可能有问题，
                 action, action_prob, critic = agent.select_action_batch(state, device, tgtoutput_score_tensor, True)
+                #print("critic=",critic, "action=",action)
 
                 real_output, _ = model_judge_state(pic_score_tensor, ope_seqA_tensor, trg_mask)
 
                 _, sample = torch.topk(real_output, k=1, dim=-1)
+                #print('sample=',sample)
                 samplenp = sample.cpu().numpy()
                 reward = np.ones_like(samplenp[0, :, 0])
                 reward = reward.astype(np.float32)

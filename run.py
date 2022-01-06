@@ -66,9 +66,9 @@ N = 15000  # 运行N次后学习
 parallel = 100
 episode = 3
 lr = 0.0003
-agent = Agent(action_num=7, pl_num=parallel,
-              lr=lr, episode=episode,
-              input_size=6)
+agent = Agent(动作数=7, 并行条目数=parallel,
+              学习率=lr, 轮数=episode,
+              输入维度=6)
 
 
 def get_key_name(key):
