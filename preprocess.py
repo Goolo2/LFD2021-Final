@@ -22,7 +22,8 @@ for root, dirs, files in os.walk(records):
     if len(dirs) > 0:
         break
 for folder in dirs:
-    jsondir = records+'/' + folder + '/operations.json'
+    # jsondir = records+'/' + folder + '/operations.json'
+    jsondir = records+'/' + folder + '/newoperations.json'
     npdata_dir = records+'/' + folder + '/processed_data.npz'
     if os.path.isfile(npdata_dir):
         continue
@@ -53,31 +54,33 @@ for folder in dirs:
             df = data_col[i]
 
             if img_tensor.shape[0] == 0:
-                img = Image.open(records+'/' + folder + '/{}.jpg'.format(df["图片号"]))
+                img = Image.open(records+'/' + folder + '/{}.jpg'.format(df["img_idx"]))
                 img2 = np.array(img)
 
-                img2 = torch.tensor(img2).cuda(device).unsqueeze(0).permute(0, 3, 2, 1) / 255
+                # img2 = torch.tensor(img2).cuda(device).unsqueeze(0).permute(0, 3, 2, 1) / 255
+                img2 = torch.from_numpy(img2).cuda(device).unsqueeze(0).permute(0, 3, 2, 1) / 255
                 _, out = resnet101(img2)
                 img_tensor = out.reshape(1, 6*6*2048)
-                tmp_move = df["移动操作"]
+                tmp_move = df["move_ope"]
                 if tmp_move != '无移动':
                     move_ope = tmp_move
 
-                ope_seq[0, 0] = comb_dict[move_ope + "_" + df["动作操作"]]
-                end_seq[0, 0] = df["结束"]
+                ope_seq[0, 0] = comb_dict[move_ope + "_" + df["act_ope"]]
+                end_seq[0, 0] = df["end"]
             else:
-                img = Image.open(records+'/' + folder + '/{}.jpg'.format(df["图片号"]))
+                img = Image.open(records+'/' + folder + '/{}.jpg'.format(df["img_idx"]))
                 img2 = np.array(img)
 
-                img2 = torch.tensor(img2).cuda(device).unsqueeze(0).permute(0, 3, 2, 1) / 255
+                # img2 = torch.tensor(img2).cuda(device).unsqueeze(0).permute(0, 3, 2, 1) / 255
+                img2 = torch.from_numpy(img2).cuda(device).unsqueeze(0).permute(0, 3, 2, 1) / 255
                 _, out = resnet101(img2)
 
                 img_tensor = torch.cat((img_tensor, out.reshape(1, 6*6*2048)), 0)
-                tmp_move = df["移动操作"]
+                tmp_move = df["move_ope"]
                 if tmp_move != '无移动':
                     move_ope = tmp_move
-                ope_seq = np.append(ope_seq, comb_dict[move_ope + "_" + df["动作操作"]])
-                end_seq = np.append(end_seq, df["结束"])
+                ope_seq = np.append(ope_seq, comb_dict[move_ope + "_" + df["act_ope"]])
+                end_seq = np.append(end_seq, df["end"])
 
         img_tensornp = img_tensor.cpu().numpy()
         ope_seq = ope_seq.astype(np.int64)

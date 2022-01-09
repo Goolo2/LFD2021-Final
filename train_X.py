@@ -32,30 +32,23 @@ for root, dirs, files in os.walk('../dataset/unused'):
 comb_idx_dir = "./json/comb_idx.json"
 idx_comb_dir = "./json/idx_comb.json"
 
-# if os.path.isfile(comb_idx_dir) and os.path.isfile(idx_comb_dir):
-#     comb_idx, idx_comb = 读出引索(comb_idx_dir, idx_comb_dir)
-
 comb_idx = read_json(comb_idx_dir)
 idx_comb = read_json(idx_comb_dir)
 
-# with open(comb_idx_dir, encoding='utf8') as f:
-#     comb_idx = json.load(f)
-
 device = torch.device("cuda:0" if (torch.cuda.is_available()) else "cpu")
-#
-#
 config = TransformerConfig()
 # 模型路径 = 'model_weights_2021-05-7D'
 
 model_judge_state = Transformer(6, 768, 2, 12, 0.0, 6*6*2048)
-model_judge_state.load_state_dict(torch.load('weights/model_weights_判断状态L'))
+# model_judge_state.load_state_dict(torch.load('weights/model_weights_判断状态L'))
+model_judge_state.load_state_dict(torch.load('weights/state_model_weight_new'))
 model_judge_state.cuda(device).requires_grad_(False)
 
 N = 15000  # 运行N次后学习
 parallel = 100
 episode = 3
 lr = 0.0003
-agent = Agent(action_num=7, pl_num=parallel,
+agent = Agent(act_num=7, parallel_num=parallel,
               lr=lr, episode=episode,
               input_size=6)
 
@@ -66,7 +59,9 @@ branch = 1
 
 count = 0
 time_start = time.time()
-for j in range(100):
+for j in range(1):
+    # for j in range(1):
+    print(j)
     # random.shuffle(dirs)
     for folder in dirs:
         predata = 'E:/TBSI/课程/数据学习/final/NEWADB/WZCQ-main/dataset/unused/' + folder + '/processed_data.npz'
@@ -164,15 +159,13 @@ for j in range(100):
                     #_, 抽样 = torch.topk(输出_实际_A, k=1, dim=-1)
                     #抽样np = 抽样.cpu().numpy()
                     #打印抽样数据(idx_comb, 抽样np[0:1,:,:], 目标输出_分_torch[0,:])
-                    print("用时{} 第{}轮 第{}张 号{}".format(duringtime, j, count, folder))
+                    print("time{} epoch{} count{} folder{}".format(duringtime, j, count, folder))
+                    
                 if count % 45060 == 0:
                     print('888')
 
                 # loss.backward()
-
                 # optimizer.step()
                 count = count+1
                 i = i+1
-    agent.savemodel(j)
-    #torch.save(model.state_dict(), 'weights/model_weights_2021-05-7D')
-    #torch.save(model.state_dict(), 'weights/model_weights_2021-05-7D{}'.format(str(j)))
+agent.savemodel('0109')
