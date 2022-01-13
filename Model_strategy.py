@@ -57,7 +57,7 @@ class Decoder(nn.Module):
 
 
 class Transformer(nn.Module):
-    def __init__(self,  trg_vocab, d_model, N, heads, dropout, graph_vec_size=6*6*2048):
+    def __init__(self,  trg_vocab, d_model, N, heads, dropout, 图向量尺寸=6*6*2048):
         super().__init__()
         self.graph_trans = MLP(graph_vec_size, d_model)
 
@@ -91,7 +91,7 @@ def get_model(opt, trg_vocab, model_weights='model_weights'):
             print('model weights dont exists')
     else:
         print('no opt.load_weights')
-        total = 0
+        量 = 0
         for p in model.parameters():
             if p.dim() > 1:
                 # nn.init.xavier_uniform_(p)
@@ -280,20 +280,20 @@ class Agent:
         model = model.cuda(device)
         self.action = model
         #torch.save(self.动作.state_dict(), 'weights/模型_动作ppo阶段停bZ1')
-        self.optimizer = torch.optim.Adam(self.action.parameters(), lr=2e-5, betas=(0.9, 0.95), eps=1e-9)
+        self.优化函数 = torch.optim.Adam(self.action.parameters(), lr=2e-5, betas=(0.9, 0.95), eps=1e-9)
 
         # self.数据集 = PPO_数据集(并行条目数)
         # self.文件名集 = []
 
-    # def 记录数据(self, 状态, 动作, 动作概率, 评价, 回报, 完结, 计数):
-    #     self.数据集.记录数据(状态, 动作, 动作概率, 评价, 回报, 完结, 计数)
+    def 记录数据(self, 状态, 动作, 动作概率, 评价, 回报, 完结, 计数):
+        self.数据集.记录数据(状态, 动作, 动作概率, 评价, 回报, 完结, 计数)
 
-    # def 存硬盘(self, 文件名):
-    #     self.数据集.存硬盘(文件名)
-    #     self.文件名集.append(文件名)
+    def 存硬盘(self, 文件名):
+        self.数据集.存硬盘(文件名)
+        self.文件名集.append(文件名)
 
-    # def 读硬盘(self, 文件名):
-    #     self.数据集.读硬盘(文件名)
+    def 读硬盘(self, 文件名):
+        self.数据集.读硬盘(文件名)
 
     def savemodel(self, num):
         print('... savemodel ...')
@@ -504,10 +504,10 @@ class Agent:
             total_loss = ac_loss  # + 0.5 * 评价损失 - self.熵系数 * 熵损失
             # print(总损失)
 
-            self.optimizer.zero_grad()
+            self.优化函数.zero_grad()
             # self.优化函数_评论.zero_grad()
-            total_loss.backward()
-            self.optimizer.step()
+            总损失.backward()
+            self.优化函数.step()
         # self.优化函数_评论.step()
 
     # def 监督强化学习A(self, device, 状态, 回报, 动作, 动作可能性, 评价, 完结集):

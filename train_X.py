@@ -130,10 +130,12 @@ for j in range(100):
 
                 # TODO: 这里开了手动的flag可能有问题，
                 action, action_prob, critic = agent.select_action_batch(state, device, tgtoutput_score_tensor, True)
+                #print("critic=",critic, "action=",action)
 
                 real_output, _ = model_judge_state(pic_score_tensor, ope_seqA_tensor, trg_mask)
 
                 _, sample = torch.topk(real_output, k=1, dim=-1)
+                #print('sample=',sample)
                 samplenp = sample.cpu().numpy()
                 reward = np.ones_like(samplenp[0, :, 0])
                 reward = reward.astype(np.float32)
