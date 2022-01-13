@@ -8,7 +8,6 @@ from config import GPT2Config, TransformerConfig
 from Batch import create_masks
 
 import torch.nn.functional as F
-from get_trainingdata import *
 from utils import *
 import os
 import random
@@ -59,11 +58,12 @@ branch = 1
 
 count = 0
 time_start = time.time()
-for j in range(1):
+for j in range(100):
     # for j in range(1):
-    print(j)
+    print(f'epoch = {j}')
     # random.shuffle(dirs)
     for folder in dirs:
+        allrewards = []
         predata = 'E:/TBSI/课程/数据学习/final/NEWADB/WZCQ-main/dataset/unused/' + folder + '/processed_data.npz'
         if os.path.isfile(predata):
             npzdata = np.load(predata, allow_pickle=True)
@@ -81,7 +81,6 @@ for j in range(1):
 
             while loop:
                 if idx + chunksize < ope_seq.shape[0]:
-
                     ope_score = ope_seq[idx:idx + chunksize]
                     tgtoutput_score = ope_seq[idx + 1:idx + 1 + chunksize]
                     pic_score = img_tensornp[idx:idx + chunksize, :]
@@ -145,7 +144,8 @@ for j in range(1):
                     reward[count] = score
 
                 agent.supervised_rl(device, state, reward, action, action_prob, critic)
-
+                mean_reward = np.mean(reward)
+                print('mean reward = {}'.format(mean_reward))
                 # 输出_实际_A = model(图片_分_torch,操作_分_torch ,trg_mask)
                 # lin = 输出_实际_A.view(-1, 输出_实际_A.size(-1))
                 # optimizer.zero_grad()
@@ -160,7 +160,7 @@ for j in range(1):
                     #抽样np = 抽样.cpu().numpy()
                     #打印抽样数据(idx_comb, 抽样np[0:1,:,:], 目标输出_分_torch[0,:])
                     print("time{} epoch{} count{} folder{}".format(duringtime, j, count, folder))
-                    
+
                 if count % 45060 == 0:
                     print('888')
 

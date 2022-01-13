@@ -262,7 +262,8 @@ class Agent:
         # 模型名称 = '模型_策略梯度_丙TA'
         # weight = '模型_策略梯度_丙TA'
         # weight = 'rl_model_weight_new'
-        weight = 'rl_model_weight_new'
+        # weight = 'rl_model_weight_new'
+        weight = 'rl_model_weight_0109'
 
         config = TransformerConfig()
         model = get_model(config, 130, weight)

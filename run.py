@@ -13,7 +13,7 @@ import torchvision
 from Batch import create_masks
 from utils import combine_states
 
-from get_trainingdata import *
+# from get_trainingdata import *
 from utils import *
 
 from resnet_utils import myResnet
